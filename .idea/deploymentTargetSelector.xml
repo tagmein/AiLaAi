@@ -4,14 +4,12 @@
     <selectionStates>
       <SelectionState runConfigName="Ai_La_Ai.app">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-10-13T11:02:47.328404698Z">
-          <Target type="DEFAULT_BOOT">
-            <handle>
-              <DeviceId pluginId="PhysicalDevice" identifier="serial=Y5P0221121001166" />
-            </handle>
-          </Target>
-        </DropdownSelection>
-        <DialogSelection />
+      </SelectionState>
+      <SelectionState runConfigName="Ai_La_Ai.app.unitTest">
+        <option name="selectionMode" value="DROPDOWN" />
+      </SelectionState>
+      <SelectionState runConfigName="Ai_La_Ai.app.androidTest">
+        <option name="selectionMode" value="DROPDOWN" />
       </SelectionState>
       <SelectionState runConfigName="Ai_La_Ai.app.main">
         <option name="selectionMode" value="DROPDOWN" />
