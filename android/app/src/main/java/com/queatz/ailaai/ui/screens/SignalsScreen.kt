@@ -98,6 +98,7 @@ import com.queatz.ailaai.services.push
 import com.queatz.ailaai.services.signals as signalsService
 import com.queatz.ailaai.ui.components.AppHeader
 import com.queatz.ailaai.ui.components.BackButton
+import com.queatz.ailaai.ui.components.Loading
 import com.queatz.ailaai.ui.components.PageInput
 import com.queatz.ailaai.ui.components.SearchFieldAndAction
 import com.queatz.ailaai.ui.components.SignalAttachments
@@ -116,6 +117,7 @@ import com.queatz.db.Signal
 import com.queatz.db.SignalSendExtended
 import com.queatz.push.SignalPushData
 import com.queatz.push.SignalReplyPushData
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.launch
@@ -141,7 +143,9 @@ fun SignalsScreen(id: String? = null) {
     var signals by remember { mutableStateOf(emptyList<Signal>()) }
     var personSignals by remember { mutableStateOf(emptyList<PersonSignal>()) }
     var activeSignals by remember { mutableStateOf(if (geo == null) signalsService.activeSignals.value else null) }
-    var isLoading by remember { mutableStateOf(true) }
+    var isLoadingActive by remember { mutableStateOf(activeSignals == null) }
+    var isLoadingSignals by remember { mutableStateOf(true) }
+    var isLoadingMoreSignals by remember { mutableStateOf(false) }
     var signalsOffset by remember { mutableIntStateOf(0) }
     var canLoadMore by remember { mutableStateOf(true) }
 
@@ -166,12 +170,19 @@ fun SignalsScreen(id: String? = null) {
 
     fun refreshActive() {
         scope.launch {
-            api.activeSignals(geo?.toList(), onError = { isLoading = false }) {
+            if (activeSignals == null) {
+                isLoadingActive = true
+            }
+            api.activeSignals(geo?.toList(), onError = {
+                if (it !is CancellationException) {
+                    isLoadingActive = false
+                }
+            }) {
                 activeSignals = it
                 if (geo == null) {
                     signalsService.update(it)
                 }
-                isLoading = false
+                isLoadingActive = false
                 
                 // If we came from a deep link, open the correct dialog
                 if (id != null && !hasOpenedDeepLink) {
@@ -193,24 +204,31 @@ fun SignalsScreen(id: String? = null) {
         if (reset) {
             signalsOffset = 0
             canLoadMore = true
+            isLoadingSignals = signals.isEmpty()
+        } else {
+            if (!canLoadMore || isLoadingSignals || isLoadingMoreSignals) {
+                return
+            }
+            isLoadingMoreSignals = true
         }
 
-        if (!canLoadMore || (isLoading && !reset)) {
-            return
-        }
-
-        isLoading = true
         scope.launch {
             api.signals(
                 localHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY),
                 offset = signalsOffset,
-                onError = { isLoading = false }
+                onError = {
+                    if (it !is CancellationException) {
+                        isLoadingSignals = false
+                        isLoadingMoreSignals = false
+                    }
+                }
             ) {
                 signals = if (reset) it else signals + it
                 signalsOffset = signals.size
                 canLoadMore = it.size >= 20
                 categories = signals.flatMap { it.categories ?: emptyList() }.distinct().sorted()
-                isLoading = false
+                isLoadingSignals = false
+                isLoadingMoreSignals = false
             }
         }
     }
@@ -321,66 +339,61 @@ fun SignalsScreen(id: String? = null) {
                     )
                 }
 
-                if (filteredSignals.isEmpty()) {
+                if (isLoadingSignals && signals.isEmpty()) {
                     item(span = { GridItemSpan(maxLineSpan) }) {
-                        Text(
-                            text = stringResource(R.string.no_signals),
-                            style = MaterialTheme.typography.bodySmall,
-                            modifier = Modifier.padding(horizontal = 1.pad, vertical = 1.pad)
-                        )
+                        Loading(modifier = Modifier.padding(vertical = 1.pad))
                     }
-                    return@LazyVerticalGrid
-                }
+                } else {
+                    items(filteredSignals) { signal ->
+                        val personSignal = personSignals.find { it.signal == signal.id }
+                        val isOn = personSignal?.turnedOn == true
 
-                items(filteredSignals) { signal ->
-                    val personSignal = personSignals.find { it.signal == signal.id }
-                    val isOn = personSignal?.turnedOn == true
-
-                    SignalBubble(signal, isOn = isOn, onLongClick = {
-                        if (isOn) {
-                            scope.launch {
-                                api.toggleSignal(signal.id!!) {
-                                    personSignals = personSignals.filter { it.signal != signal.id } + it
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    Toast.makeText(nav.context, nav.context.getString(R.string.signal_turned_off, signal.name), Toast.LENGTH_SHORT).show()
+                        SignalBubble(signal, isOn = isOn, onLongClick = {
+                            if (isOn) {
+                                scope.launch {
+                                    api.toggleSignal(signal.id!!) {
+                                        personSignals = personSignals.filter { it.signal != signal.id } + it
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        Toast.makeText(nav.context, nav.context.getString(R.string.signal_turned_off, signal.name), Toast.LENGTH_SHORT).show()
+                                    }
                                 }
                             }
-                        }
-                    }) {
-                        if (!isOn) {
-                            scope.launch {
-                                api.toggleSignal(signal.id!!) {
-                                    personSignals = personSignals.filter { it.signal != signal.id } + it
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    Toast.makeText(nav.context, nav.context.getString(R.string.signal_turned_on, signal.name), Toast.LENGTH_SHORT).show()
+                        }) {
+                            if (!isOn) {
+                                scope.launch {
+                                    api.toggleSignal(signal.id!!) {
+                                        personSignals = personSignals.filter { it.signal != signal.id } + it
+                                        haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                        Toast.makeText(nav.context, nav.context.getString(R.string.signal_turned_on, signal.name), Toast.LENGTH_SHORT).show()
+                                    }
                                 }
+                            } else {
+                                showSendDialog = signal
                             }
-                        } else {
-                            showSendDialog = signal
                         }
                     }
-                }
 
-                if (canLoadMore && signals.isNotEmpty()) {
-                    item(span = { GridItemSpan(maxLineSpan) }) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(1.pad),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            CircularProgressIndicator()
-                        }
+                    if (canLoadMore && signals.isNotEmpty()) {
+                        item(span = { GridItemSpan(maxLineSpan) }) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(1.pad),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator()
+                            }
 
-                        LaunchedEffect(Unit) {
-                            loadSignals()
+                            LaunchedEffect(Unit) {
+                                loadSignals()
+                            }
                         }
                     }
                 }
             }
 
-            if (isLoading && activeSignals == null) {
-                LinearProgressIndicator(modifier = Modifier.fillMaxWidth().align(Alignment.TopCenter))
+            if (isLoadingActive && activeSignals == null && !isLoadingSignals) {
+                Loading(modifier = Modifier.align(Alignment.TopCenter))
             }
 
             PageInput(
@@ -394,7 +407,7 @@ fun SignalsScreen(id: String? = null) {
             ) {
                 SearchContent(
                     locationSelector = locationSelector,
-                    isLoading = isLoading,
+                    isLoading = isLoadingActive || isLoadingSignals,
                     categories = categories,
                     category = selectedCategory
                 ) {

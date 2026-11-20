@@ -281,7 +281,7 @@ fun GroupScreen(groupId: String) {
     var sendMessage by remember { mutableStateOf("") }
     var groupExtended by remember { mutableStateOf<GroupExtended?>(null) }
     var messages by remember { mutableStateOf<List<Message>>(listOf()) }
-    var isLoading by rememberStateOf(false)
+    var isLoading by rememberStateOf(true)
     var showGroupNotFound by rememberStateOf(false)
     var showLeaveGroup by rememberStateOf(false)
     var showQrCodeDialog by rememberStateOf(false)
@@ -1630,21 +1630,27 @@ fun GroupScreen(groupId: String) {
                                 .background(MaterialTheme.colorScheme.surfaceColorAtElevation(1.dp))
                                 .shadow(0.25.dp)
                         ) {
-                            StickerPacks(
-                                stickerPacks ?: emptyList(),
-                                onStickerLongClick = {
-                                    scope.launch {
-                                        say.say(it.message)
-                                    }
-                                },
-                                onStickerPack = {
-                                    nav.appNavigate(AppNav.StickerPack(it.id!!))
-                                },
-                                modifier = Modifier.fillMaxSize()
-                            ) { sticker ->
-                                showMore = false
-                                focusRequester.tryRequestFocus()
-                                sendSticker(sticker)
+                            if (stickerPacks == null) {
+                                Loading(
+                                    modifier = Modifier.align(Alignment.Center)
+                                )
+                            } else {
+                                StickerPacks(
+                                    stickerPacks!!,
+                                    onStickerLongClick = {
+                                        scope.launch {
+                                            say.say(it.message)
+                                        }
+                                    },
+                                    onStickerPack = {
+                                        nav.appNavigate(AppNav.StickerPack(it.id!!))
+                                    },
+                                    modifier = Modifier.fillMaxSize()
+                                ) { sticker ->
+                                    showMore = false
+                                    focusRequester.tryRequestFocus()
+                                    sendSticker(sticker)
+                                }
                             }
                             FloatingActionButton(
                                 onClick = {

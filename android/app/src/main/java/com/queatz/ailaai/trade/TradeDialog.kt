@@ -32,6 +32,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -125,7 +126,7 @@ fun TradeDialog(
 ) {
     val scope = rememberCoroutineScope()
     var trade by rememberStateOf<TradeExtended?>(null)
-    var isLoading by rememberStateOf(false)
+    var isLoading by remember(tradeId) { mutableStateOf(true) }
     var isCompletedOrCancelled by rememberStateOf(false)
     var showCancelDialog by rememberStateOf(false)
     var showMenu by rememberStateOf(false)

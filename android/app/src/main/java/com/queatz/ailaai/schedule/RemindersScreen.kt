@@ -34,7 +34,7 @@ import com.queatz.db.Reminder
 
 @Composable
 fun RemindersScreen() {
-    var isLoading by rememberStateOf(false)
+    var isLoading by rememberStateOf(true)
     var reminders by rememberStateOf(emptyList<Reminder>())
     var search by rememberStateOf("")
     var selectedCategory by rememberStateOf<String?>(null)

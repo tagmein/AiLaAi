@@ -122,6 +122,8 @@ fun FriendsScreen() {
         )
     }
     var isLoading by rememberStateOf(allGroups.isEmpty())
+    var isSearchingPeople by rememberStateOf(false)
+    var loadedPeopleSearch by rememberStateOf<String?>(null)
     var geo: LatLng? by remember { mutableStateOf(null) }
     val nav = nav
     val me = me
@@ -197,10 +199,13 @@ fun FriendsScreen() {
     }
 
     suspend fun reload(passive: Boolean = false) {
+        var cancelled = false
         isLoading = (!passive && groupsCache.isEmpty()) || results.isEmpty()
         api.groups(
             onError = {
-                if (!passive && it !is CancellationException) {
+                if (it is CancellationException) {
+                    cancelled = true
+                } else if (!passive) {
                     context.showDidntWork(R.string.error_load_groups)
                 }
             }
@@ -208,7 +213,9 @@ fun FriendsScreen() {
             allGroups = it.filter { it.group != null }
             messages.refresh(me, allGroups)
         }
-        isLoading = false
+        if (!cancelled) {
+            isLoading = false
+        }
         scope.launch {
             joins.reload()
         }
@@ -244,9 +251,24 @@ fun FriendsScreen() {
     LaunchedEffect(searchText) {
         if (searchText.isBlank()) {
             allPeople = emptyList()
+            isSearchingPeople = false
+            loadedPeopleSearch = ""
         } else {
-            api.people(searchText) {
+            var cancelled = false
+            isSearchingPeople = true
+            api.people(
+                searchText,
+                onError = {
+                    if (it is CancellationException) {
+                        cancelled = true
+                    }
+                }
+            ) {
                 allPeople = it
+            }
+            if (!cancelled) {
+                loadedPeopleSearch = searchText
+                isSearchingPeople = false
             }
         }
         reloadFlow.emit(true)
@@ -355,7 +377,8 @@ fun FriendsScreen() {
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxSize()
             ) {
-                if (isLoading) {
+                val showLoading = isLoading || (results.isEmpty() && (isSearchingPeople || (searchText.isNotBlank() && loadedPeopleSearch != searchText)))
+                if (showLoading) {
                     item {
                         Loading()
                     }

@@ -55,6 +55,7 @@ import com.queatz.ailaai.ui.theme.pad
 import com.queatz.db.Geo
 import com.queatz.db.Reminder
 import com.queatz.db.toList
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.launch
 import kotlin.time.Clock
 import kotlinx.datetime.DateTimeUnit
@@ -98,7 +99,12 @@ fun EventsScreen(
             start = start,
             end = end,
             open = true,
-            geo = geo?.toList()
+            geo = geo?.toList(),
+            onError = {
+                if (it !is CancellationException) {
+                    isLoading = false
+                }
+            }
         ) { occurrences ->
             val newEvents = occurrences.toEvents()
                 .filter { it.event != ReminderEventType.End }
@@ -165,7 +171,7 @@ fun EventsScreen(
         ) {
             header(this)
 
-            if (isLoading && events.isEmpty()) {
+            if (isLoading && groupedEvents.isEmpty()) {
                 item {
                     Loading(
                         modifier = Modifier

@@ -31,6 +31,7 @@ import com.queatz.ailaai.item.InventoryItemLayout
 import com.queatz.ailaai.ui.components.DialogBase
 import com.queatz.ailaai.ui.components.DialogLayout
 import com.queatz.ailaai.ui.components.EmptyText
+import com.queatz.ailaai.ui.components.Loading
 import com.queatz.ailaai.ui.dialogs.DialogCloseButton
 import com.queatz.ailaai.ui.theme.pad
 import com.queatz.db.InventoryItemExtended
@@ -44,7 +45,7 @@ fun AddInventoryItemDialog(
     onInventoryItem: (InventoryItemExtended) -> Unit
 ) {
     var searchText by rememberStateOf("")
-    var isLoading by rememberStateOf(false)
+    var isLoading by rememberStateOf(true)
     var items by rememberStateOf(emptyList<InventoryItemExtended>())
     val keyboardController = LocalSoftwareKeyboardController.current!!
 
@@ -94,25 +95,29 @@ fun AddInventoryItemDialog(
                             .padding(bottom = 1.pad)
                     )
                 }
-                LazyVerticalGrid(
-                    state = rememberLazyGridState(),
-                    columns = GridCells.Adaptive(96.dp),
-                    verticalArrangement = Arrangement.spacedBy(1.pad),
-                    horizontalArrangement = Arrangement.spacedBy(1.pad),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                ) {
-                    items(shownItems) {
-                        InventoryItemLayout(it) {
-                            onInventoryItem(it)
+                if (isLoading) {
+                    Loading()
+                } else {
+                    LazyVerticalGrid(
+                        state = rememberLazyGridState(),
+                        columns = GridCells.Adaptive(96.dp),
+                        verticalArrangement = Arrangement.spacedBy(1.pad),
+                        horizontalArrangement = Arrangement.spacedBy(1.pad),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                    ) {
+                        items(shownItems) {
+                            InventoryItemLayout(it) {
+                                onInventoryItem(it)
+                            }
                         }
-                    }
 
-                    if (shownItems.isEmpty()) {
-                        item(span = { GridItemSpan(maxLineSpan) }) {
-                            EmptyText(
-                                stringResource(R.string.no_items)
-                            )
+                        if (shownItems.isEmpty()) {
+                            item(span = { GridItemSpan(maxLineSpan) }) {
+                                EmptyText(
+                                    stringResource(R.string.no_items)
+                                )
+                            }
                         }
                     }
                 }

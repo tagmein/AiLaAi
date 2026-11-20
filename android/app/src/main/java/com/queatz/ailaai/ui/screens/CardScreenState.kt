@@ -41,7 +41,7 @@ fun rememberCardScreenState(cardId: String): CardScreenState {
 
     val cardState = rememberSaveable(cardId, stateSaver = jsonSaver<Card?>()) { mutableStateOf(null) }
     val cardsState = rememberSaveable(cardId, stateSaver = jsonSaver<List<Card>>(emptyList())) { mutableStateOf(emptyList()) }
-    val isLoadingState = rememberSaveable(cardId) { mutableStateOf(false) }
+    val isLoadingState = rememberSaveable(cardId) { mutableStateOf(cardState.value == null) }
     val notFoundState = rememberSaveable(cardId) { mutableStateOf(false) }
 
     return remember(cardId) {

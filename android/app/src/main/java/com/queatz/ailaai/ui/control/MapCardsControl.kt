@@ -83,6 +83,10 @@ fun mapCardsControl(
         if (reload) {
             offset = 0
             hasMore = true
+            if (cards.isEmpty() || isError) {
+                isLoading = true
+                isError = false
+            }
         }
         api.cards(
             geo = geo.toGeo(),

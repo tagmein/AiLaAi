@@ -108,6 +108,7 @@ import com.queatz.ailaai.ui.components.Dropdown
 import com.queatz.ailaai.ui.components.EmptyText
 import com.queatz.ailaai.ui.components.GroupPhoto
 import com.queatz.ailaai.ui.components.LinkifyText
+import com.queatz.ailaai.ui.components.Loading
 import com.queatz.ailaai.ui.components.LoadingIcon
 import com.queatz.ailaai.ui.components.ProfileToolbar
 import com.queatz.ailaai.ui.components.SearchFieldAndAction
@@ -144,6 +145,7 @@ import com.queatz.db.ProfileStats
 import com.queatz.db.ProfilesAttachment
 import com.queatz.db.Trade
 import createTrade
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -169,6 +171,8 @@ fun ProfileScreen(personId: String) {
     var subscribed by rememberStateOf(false)
     var showMedia by remember { mutableStateOf<Media?>(null) }
     var isLoading by rememberStateOf(true)
+    var isLoadingCards by rememberStateOf(true)
+    var loadedSearch by rememberStateOf<String?>(null)
     var isSubscribing by rememberStateOf(false)
     var search by rememberStateOf("")
     var isError by rememberStateOf(false)
@@ -341,14 +345,35 @@ fun ProfileScreen(personId: String) {
     }
 
     suspend fun reloadCards() {
-        if (search.isBlank()) {
-            api.profileCards(personId) {
+        var cancelled = false
+        val currentSearch = search
+        if (currentSearch.isBlank()) {
+            api.profileCards(
+                personId,
+                onError = {
+                    if (it is CancellationException) {
+                        cancelled = true
+                    }
+                }
+            ) {
                 cards = it
             }
         } else {
-            api.activeCardsOfPerson(personId, search) {
+            api.activeCardsOfPerson(
+                personId,
+                currentSearch,
+                onError = {
+                    if (it is CancellationException) {
+                        cancelled = true
+                    }
+                }
+            ) {
                 cards = it
             }
+        }
+        if (!cancelled) {
+            loadedSearch = currentSearch
+            isLoadingCards = false
         }
     }
 
@@ -359,6 +384,7 @@ fun ProfileScreen(personId: String) {
     }
 
     LaunchedEffect(search) {
+        isLoadingCards = true
         cards = emptyList()
         reloadCards()
     }
@@ -1117,8 +1143,14 @@ fun ProfileScreen(personId: String) {
                 }
             }
 
-            if (search.isNotBlank() && cards.isEmpty()) {
-                item {
+            if (search.isNotBlank() && (isLoadingCards || loadedSearch != search)) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
+                    Loading(
+                        modifier = Modifier.padding(1.pad)
+                    )
+                }
+            } else if (search.isNotBlank() && cards.isEmpty()) {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     EmptyText(stringResource(R.string.no_cards_to_show))
                 }
             }

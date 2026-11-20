@@ -561,7 +561,10 @@ fun SettingsScreen(
                             style = MaterialTheme.typography.titleMedium.copy(lineHeight = 2.5.em)
                         )
                         Text(
-                            profile?.profile?.url?.let { "$appDomain/$it" } ?: stringResource(R.string.none),
+                            when (val loadedProfile = profile) {
+                                null -> stringResource(R.string.please_wait)
+                                else -> loadedProfile.profile.url?.let { "$appDomain/$it" } ?: stringResource(R.string.none)
+                            },
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.secondary
                         )

@@ -179,6 +179,9 @@ fun SheetScreen(
 
     suspend fun reload() {
         if (geo != null) {
+            if (stories.isEmpty()) {
+                isLoading = true
+            }
             api.stories(
                 geo = geo.toGeo(),
                 public = true,
@@ -323,7 +326,7 @@ fun SheetScreen(
                         state = cardsState,
                         cards = mapCardsControl.mapCategoriesControl.cardsOfCategory,
                         geo = myGeo,
-                        isLoading = isLoading,
+                        isLoading = mapCardsControl.isLoading,
                         isError = mapCardsControl.isError,
                         value = value,
                         valueChange = valueChange,
@@ -350,7 +353,7 @@ fun SheetScreen(
                         aboveSearchFieldContent = {
                             SearchContent(
                                 locationSelector = locationSelector,
-                                isLoading = isLoading,
+                                isLoading = mapCardsControl.isLoading,
                                 filters = filters,
                                 categories = mapCardsControl.mapCategoriesControl.categories,
                                 category = mapCardsControl.mapCategoriesControl.selectedCategory,

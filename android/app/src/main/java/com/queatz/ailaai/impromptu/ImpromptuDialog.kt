@@ -403,8 +403,8 @@ private fun ImpromptuHistoryDialog(
     LaunchedEffect(Unit) {
         api.getImpromptuHistory {
             historyItems = it
-            isLoading = false
         }
+        isLoading = false
     }
 
     DialogBase(

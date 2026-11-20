@@ -40,19 +40,17 @@ fun MyItemsScreen() {
     val scope = rememberCoroutineScope()
 
     var search by rememberSavableStateOf("")
-    var isLoading by rememberStateOf(false)
+    var isLoading by rememberStateOf(true)
     var showMintItem by rememberStateOf<Item?>(null)
     var showCreateItemDialog by rememberStateOf(false)
     var items by rememberStateOf<List<ItemExtended>>(emptyList())
-    var shownItems by rememberStateOf<List<ItemExtended>>(emptyList())
-    val context = LocalContext.current
-
-    LaunchedEffect(items, search) {
-        shownItems = if (search.isBlank()) items else items.filter {
+    val shownItems = remember(items, search) {
+        if (search.isBlank()) items else items.filter {
             it.item!!.name!!.contains(search, ignoreCase = true) ||
                     it.item!!.description!!.contains(search, ignoreCase = true)
         }
     }
+    val context = LocalContext.current
 
     fun scrollToTop() {
         scope.launch {

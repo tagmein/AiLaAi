@@ -79,6 +79,8 @@ fun GroupsScreen(
             .sortedDistinct()
     }
     var isLoading by rememberStateOf(allGroups.isEmpty())
+    var loadedGeo by rememberStateOf<Geo?>(null)
+    var loadedSearchText by rememberStateOf<String?>(null)
     val me = me
     var reloadKey by remember {
         mutableStateOf(nextInt())
@@ -88,27 +90,31 @@ fun GroupsScreen(
     val nav = nav
     var showCreateGroupDialog by rememberStateOf(false)
 
-    LaunchedEffect(reloadKey) {
+    LaunchedEffect(geo, searchText, reloadKey) {
         if (geo != null) {
-            isLoading = (groupsCache.isEmpty()) || allGroups.isEmpty()
+            var cancelled = false
+            isLoading = (groupsCache.isEmpty()) || allGroups.isEmpty() ||
+                    (searchText.isNotBlank() && loadedSearchText != searchText)
             api.exploreGroups(
                 geo = geo,
                 search = searchText,
                 public = true,
                 onError = {
-                    if (it !is CancellationException) {
+                    if (it is CancellationException) {
+                        cancelled = true
+                    } else {
                         context.showDidntWork(R.string.error_load_groups)
                     }
                 }
             ) {
                 allGroups = it.filter { it.group != null }
             }
-            isLoading = false
+            if (!cancelled) {
+                loadedGeo = geo
+                loadedSearchText = searchText
+                isLoading = false
+            }
         }
-    }
-
-    LaunchedEffect(geo, searchText) {
-        reloadKey = nextInt()
     }
 
     val results = remember(
@@ -162,8 +168,10 @@ fun GroupsScreen(
         ) {
             header()
 
+            val showLoading = isLoading || (results.isEmpty() && (loadedGeo != geo || loadedSearchText != searchText))
+
             when {
-                isLoading -> {
+                showLoading -> {
                     item {
                         Loading()
                     }

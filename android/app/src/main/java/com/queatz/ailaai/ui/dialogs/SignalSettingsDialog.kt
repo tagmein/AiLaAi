@@ -41,8 +41,8 @@ fun SignalSettingsDialog(
     LaunchedEffect(Unit) {
         api.myImpromptu {
             impromptu = it
-            isLoading = false
         }
+        isLoading = false
     }
 
     DialogBase(onDismissRequest) {

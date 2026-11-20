@@ -24,10 +24,9 @@ fun ChooseCategoryDialog(
     onCategory: (String?) -> Unit
 ) {
     val context = LocalContext.current
-    var isLoading by rememberStateOf(false)
     var searchText by remember { mutableStateOf("") }
     var allCategories by remember { mutableStateOf(_categoriesCache) }
-    var categories by remember { mutableStateOf(listOf<String>()) }
+    var isLoading by rememberStateOf(allCategories.isEmpty())
     var selected by remember { mutableStateOf(preselect?.inList() ?: listOf()) }
 
     LaunchedEffect(Unit) {
@@ -42,14 +41,15 @@ fun ChooseCategoryDialog(
         isLoading = allCategories.isEmpty()
         api.categories(geo.toGeo()) {
             allCategories = it
+            _categoriesCache = it
         }
         isLoading = false
     }
 
-    LaunchedEffect(allCategories, selected, searchText) {
-        categories = (if (searchText.isBlank()) allCategories else allCategories.filter {
+    val categories = remember(allCategories, searchText) {
+        if (searchText.isBlank()) allCategories else allCategories.filter {
             it.contains(searchText, true)
-        })
+        }
     }
 
     LaunchedEffect(searchText) {

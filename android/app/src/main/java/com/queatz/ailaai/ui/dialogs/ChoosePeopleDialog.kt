@@ -32,19 +32,14 @@ fun ChoosePeopleDialog(
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
-    var isLoading by rememberStateOf(false)
+    var isLoading by rememberStateOf(people == null)
     var searchText by remember { mutableStateOf("") }
     var allGroups by remember { mutableStateOf(listOf<GroupExtended>()) }
     var scannedPeople by remember { mutableStateOf(listOf<Person>()) }
-    var shownPeople by remember { mutableStateOf(listOf<Person>()) }
     var selected by remember { mutableStateOf(initiallySelected) }
     val state = rememberLazyListState()
 
-    if (people != null) {
-        LaunchedEffect(Unit) {
-            shownPeople = people.filter { !omit(it) }
-        }
-    } else {
+    if (people == null) {
         LaunchedEffect(Unit) {
             isLoading = true
             api.groups {
@@ -52,13 +47,20 @@ fun ChoosePeopleDialog(
             }
             isLoading = false
         }
+    }
 
-        LaunchedEffect(allGroups, scannedPeople, selected, searchText) {
+    val shownPeople = remember(people, allGroups, scannedPeople, searchText, omit) {
+        if (people != null) {
+            val filtered = people.filter { !omit(it) }
+            if (searchText.isBlank()) filtered else filtered.filter {
+                it.name?.contains(searchText, true) == true
+            }
+        } else {
             val allPeople = scannedPeople + allGroups
                 .flatMap { it.members!!.map { it.person!! } }
                 .filter { it.source != PersonSource.Web }
                 .filter { !omit(it) }
-            shownPeople = (if (searchText.isBlank()) allPeople else allPeople.filter {
+            (if (searchText.isBlank()) allPeople else allPeople.filter {
                 it.name?.contains(searchText, true) == true
             })
                 .distinctBy { it.id!! }

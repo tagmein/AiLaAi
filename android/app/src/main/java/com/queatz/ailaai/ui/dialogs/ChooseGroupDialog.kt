@@ -34,7 +34,6 @@ fun ChooseGroupDialog(
     var hasPreselected by rememberStateOf(false)
     var searchText by remember { mutableStateOf("") }
     var allGroups by remember { mutableStateOf(listOf<GroupExtended>()) }
-    var shownGroups by remember { mutableStateOf(listOf<GroupExtended>()) }
     var selected by remember { mutableStateOf(listOf<GroupExtended>()) }
     val me = me
 
@@ -55,13 +54,16 @@ fun ChooseGroupDialog(
     val someone = stringResource(R.string.someone)
     val emptyGroup = stringResource(R.string.empty_group_name)
 
-    LaunchedEffect(allGroups, selected, searchText) {
+    val shownGroups = remember(allGroups, searchText, omit, filter, someone, emptyGroup, me) {
         val all = allGroups
             .filter { omit.none { group -> it.group?.id == group.id } }
             .filter(filter)
-        shownGroups = (if (searchText.isBlank()) all else all.filter {
+        (if (searchText.isBlank()) all else all.filter {
             it.name(someone, emptyGroup, me?.id?.let(::listOf) ?: emptyList()).contains(searchText, true)
         }).sortedByDescending { it.pinLevel ?: if (it.pin == true) 0 else -1 }
+    }
+
+    LaunchedEffect(shownGroups) {
         if (!hasPreselected && shownGroups.isNotEmpty()) {
             if (!preselect.isNullOrEmpty() && selected.isEmpty()) {
                 selected = shownGroups.filter { group -> preselect.any { it.id == group.group?.id } }

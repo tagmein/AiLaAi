@@ -28,7 +28,7 @@ import com.queatz.db.GroupExtended
 
 @Composable
 fun GroupCards(group: GroupExtended) {
-    var isLoading by rememberStateOf(false)
+    var isLoading by remember(group) { mutableStateOf(true) }
     var cards by rememberStateOf(emptyList<Card>())
     val state = rememberLazyGridState()
     val scope = rememberCoroutineScope()

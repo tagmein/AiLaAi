@@ -31,8 +31,10 @@ import com.queatz.ailaai.R
 import com.queatz.ailaai.data.api
 import com.queatz.ailaai.extensions.notBlank
 import com.queatz.ailaai.extensions.rememberStateOf
+import com.queatz.ailaai.ui.components.Loading
 import com.queatz.ailaai.ui.theme.pad
 import com.queatz.db.Script
+import kotlinx.coroutines.CancellationException
 
 @Composable
 fun ColumnScope.SearchScriptsLayout(
@@ -43,23 +45,44 @@ fun ColumnScope.SearchScriptsLayout(
     val focusRequester = remember { FocusRequester() }
     var search by rememberStateOf("")
     var scripts by rememberStateOf(emptyList<Script>())
+    var isLoading by rememberStateOf(true)
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
     }
 
     LaunchedEffect(search) {
+        var cancelled = false
+        if (scripts.isEmpty()) {
+            isLoading = true
+        }
         if (onlyMine) {
-            api.myScripts {
+            api.myScripts(
+                onError = {
+                    if (it is CancellationException) {
+                        cancelled = true
+                    }
+                }
+            ) {
                 scripts = it.filter {
                     it.name?.contains(search, ignoreCase = true) == true ||
                             it.description?.contains(search, ignoreCase = true) == true
                 }
             }
         } else {
-            api.scripts(search.notBlank) {
+            api.scripts(
+                search.notBlank,
+                onError = {
+                    if (it is CancellationException) {
+                        cancelled = true
+                    }
+                }
+            ) {
                 scripts = it
             }
+        }
+        if (!cancelled) {
+            isLoading = false
         }
     }
 
@@ -78,11 +101,14 @@ fun ColumnScope.SearchScriptsLayout(
             .focusRequester(focusRequester)
     )
 
-    LazyColumn(
-        verticalArrangement = Arrangement.spacedBy(1.pad),
-        modifier = Modifier
-            .weight(1f)
-    ) {
+    if (isLoading && scripts.isEmpty()) {
+        Loading(modifier = Modifier.weight(1f))
+    } else {
+        LazyColumn(
+            verticalArrangement = Arrangement.spacedBy(1.pad),
+            modifier = Modifier
+                .weight(1f)
+        ) {
         items(scripts) { script ->
             Column(
                 modifier = Modifier
@@ -112,5 +138,6 @@ fun ColumnScope.SearchScriptsLayout(
                 }
             }
         }
+    }
     }
 }

@@ -21,6 +21,7 @@ import com.queatz.ailaai.services.stickers
 import com.queatz.ailaai.ui.components.AppBar
 import com.queatz.ailaai.ui.components.BackButton
 import com.queatz.ailaai.ui.components.Dropdown
+import com.queatz.ailaai.ui.components.Loading
 import com.queatz.ailaai.ui.dialogs.ReportDialog
 import com.queatz.db.StickerPack
 import kotlinx.coroutines.launch
@@ -29,6 +30,7 @@ import kotlinx.coroutines.launch
 fun StickerPackScreen(stickerPackId: String) {
     val scope = rememberCoroutineScope()
     var stickerPack by rememberStateOf<StickerPack?>(null)
+    var isLoading by remember(stickerPackId) { mutableStateOf(true) }
     var showReportDialog by rememberStateOf(false)
     val nav = nav
 
@@ -36,6 +38,7 @@ fun StickerPackScreen(stickerPackId: String) {
         api.stickerPack(stickerPackId) {
             stickerPack = it
         }
+        isLoading = false
     }
 
     if (showReportDialog) {
@@ -93,15 +96,18 @@ fun StickerPackScreen(stickerPackId: String) {
             modifier = Modifier.zIndex(1f)
         )
         Box(modifier = Modifier.weight(1f)) {
-
-            stickerPack?.let { stickerPack ->
-                StickerPackContents(
-                    stickerPack,
-                    modifier = Modifier
-                        .fillMaxSize()
-                ) {
-                    scope.launch {
-                        say.say(it.message)
+            if (isLoading) {
+                Loading()
+            } else {
+                stickerPack?.let { stickerPack ->
+                    StickerPackContents(
+                        stickerPack,
+                        modifier = Modifier
+                            .fillMaxSize()
+                    ) {
+                        scope.launch {
+                            say.say(it.message)
+                        }
                     }
                 }
             }

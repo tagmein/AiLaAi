@@ -24,6 +24,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -95,7 +96,7 @@ fun InventoryScreen() {
     val me = me
 
     var search by rememberSavableStateOf("")
-    var isLoading by rememberStateOf(false)
+    var isLoading by rememberStateOf(true)
     var showInventoryItem by rememberStateOf<InventoryItemExtended?>(null)
     var showDropInventoryItem by rememberStateOf<Pair<InventoryItemExtended, Double>?>(null)
     var showStartTradeDialog by rememberStateOf(false)
@@ -106,7 +107,12 @@ fun InventoryScreen() {
     var showDiscardDialog by rememberStateOf(false)
     var showStartTradeDialogItem by rememberStateOf<Pair<InventoryItemExtended, Double>?>(null)
     var inventory by rememberStateOf<List<InventoryItemExtended>>(emptyList())
-    var shownInventory by rememberStateOf<List<InventoryItemExtended>>(emptyList())
+    val shownInventory = remember(inventory, search) {
+        if (search.isBlank()) inventory else inventory.filter {
+            it.item!!.name!!.contains(search, ignoreCase = true) ||
+                    it.item!!.description!!.contains(search, ignoreCase = true)
+        }
+    }
     var showTradeDialog by rememberStateOf<Trade?>(null)
     val activeTrades by trading.activeTrades.collectAsState()
     var completedTrades by rememberStateOf<List<TradeExtended>?>(null)
@@ -118,13 +124,6 @@ fun InventoryScreen() {
         { geo = it },
         nav.context as Activity
     )
-
-    LaunchedEffect(inventory, search) {
-        shownInventory = if (search.isBlank()) inventory else inventory.filter {
-            it.item!!.name!!.contains(search, ignoreCase = true) ||
-                    it.item!!.description!!.contains(search, ignoreCase = true)
-        }
-    }
 
     fun scrollToTop() {
         scope.launch {

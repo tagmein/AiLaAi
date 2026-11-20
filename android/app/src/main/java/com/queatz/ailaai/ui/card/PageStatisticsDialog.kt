@@ -59,7 +59,7 @@ fun PageStatisticsDialog(
 ) {
     val since by rememberStateOf(Clock.System.now().startOfDay() - 6.days)
     var visits by rememberStateOf<List<CardVisit>>(emptyList())
-    var isLoading by rememberStateOf(false)
+    var isLoading by rememberStateOf(true)
 
     LaunchedEffect(Unit) {
         isLoading = true
